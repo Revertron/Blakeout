@@ -8,7 +8,7 @@
 //! use crypto::digest::Digest;
 //! use blakeout::Blakeout;
 //!
-//! // create a Blake2b object
+//! // create a Blakeout object, it will hash your bytes for you
 //! let mut hasher = Blakeout::default();
 //!
 //! // write input message
