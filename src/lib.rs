@@ -33,39 +33,41 @@ pub struct Blakeout {
 
 impl Default for Blakeout {
     fn default() -> Self {
-        let mut buffer = Vec::new();
-        buffer.resize(DEFAULT_HASH_SIZE * DEFAULT_HASH_COUNT, 0u8);
-        Blakeout { buffer, result: Vec::new(), dirty: false }
+        Blakeout::new()
     }
 }
 
 impl Blakeout {
+    /// Creates new instance of Blakeout hasher
     pub fn new() -> Self {
         let mut buffer = Vec::new();
         buffer.resize(DEFAULT_HASH_SIZE * DEFAULT_HASH_COUNT, 0u8);
         Blakeout { buffer, result: Vec::new(), dirty: false }
     }
 
+    /// Updates (hashes) supplied data
     pub fn update(&mut self, data: impl AsRef<[u8]>) {
         self.process_input(data.as_ref());
     }
 
-    pub fn input(&mut self, data: impl AsRef<[u8]>) {
-        self.update(data);
-    }
-
+    /// Resets current dirty state to start over
     pub fn reset(&mut self) {
-        self.buffer.resize(0, 0u8);
-        self.buffer.resize(DEFAULT_HASH_SIZE * DEFAULT_HASH_COUNT, 0u8);
         self.dirty = false;
     }
 
+    /// Returns the size of result hash in bytes
     pub fn output_size() -> usize {
         DEFAULT_HASH_SIZE
     }
 
-    pub fn finalize(self) -> Vec<u8> {
-        self.result.clone()
+    /// Returns a slice of result hash, can be used multiple times
+    pub fn result(&self) -> &[u8] {
+        &self.result
+    }
+
+    /// Converts the result hash to a String and returns it
+    pub fn result_str(&self) -> String {
+        to_hex(&self.result)
     }
 
     fn process_input(&mut self, data: &[u8]) {
@@ -102,16 +104,25 @@ impl Blakeout {
     }
 }
 
+/// Convert bytes array to HEX format
+fn to_hex(buf: &[u8]) -> String {
+    let mut result = String::new();
+    for x in buf.iter() {
+        result.push_str(&format!("{:01$x}", x, 2));
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::Blakeout;
+    use crate::{Blakeout, to_hex};
     const DATA: &[u8; 29] = b"Science is poetry of reality!";
 
     #[test]
     fn single_input() {
         let mut digest = Blakeout::default();
         digest.update(DATA);
-        assert_eq!("4be892daff5d5432b43bf05c9d2ea4769daf2dd1ec482c23839ce5d6950e9e62", to_hex(&digest.finalize()));
+        assert_eq!("4be892daff5d5432b43bf05c9d2ea4769daf2dd1ec482c23839ce5d6950e9e62", to_hex(&digest.result()));
     }
 
     #[test]
@@ -119,15 +130,18 @@ mod tests {
         let mut digest = Blakeout::default();
         digest.update(DATA);
         digest.update(DATA);
-        assert_eq!("a1b6cd16c9e718b876afb7bf4d61b64291a98a3dea0f20731da663b0358e68b9", to_hex(&digest.finalize()));
+        assert_eq!("a1b6cd16c9e718b876afb7bf4d61b64291a98a3dea0f20731da663b0358e68b9", to_hex(&digest.result()));
     }
 
-    /// Convert bytes array to HEX format
-    pub fn to_hex(buf: &[u8]) -> String {
-        let mut result = String::new();
-        for x in buf.iter() {
-            result.push_str(&format!("{:01$x}", x, 2));
-        }
-        result
+    #[test]
+    fn test_reset() {
+        let mut digest = Blakeout::default();
+        digest.update(DATA);
+        let hash1 = digest.result_str();
+        digest.reset();
+        digest.update(DATA);
+        let hash2 = digest.result_str();
+
+        assert_eq!(hash1, hash2);
     }
 }

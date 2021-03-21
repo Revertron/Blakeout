@@ -1,6 +1,6 @@
 [package]
 name = "blakeout"
-version = "0.2.0"
+version = "0.3.0"
 description = "Memory hard hashing algorithm based on Blake2s"
 authors = ["Revertron <blakeout@revertron.com>"]
 edition = "2018"
