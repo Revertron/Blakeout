@@ -1,8 +1,8 @@
 use std::env;
 use std::fs;
 use std::io::{self, Read};
-use crypto::digest::Digest;
 use blakeout::Blakeout;
+use digest::Digest;
 
 const BUFFER_SIZE: usize = 1024;
 
