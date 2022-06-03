@@ -19,8 +19,10 @@
 //! assert_eq!(res, "6cc4bddb52416711be65e4b0201106fda4ceb0de48dfdce7e3a136e490d8586f");
 //! ```
 
-use digest::Digest;
-use blake2::Blake2s;
+// Modified by Maxime Devos (2022)  (see 4(b) in the Apache license)
+
+use digest::{Update,VariableOutput};
+use blake2::Blake2sVar;
 
 const DEFAULT_HASH_SIZE: usize = 32;
 const DEFAULT_HASH_COUNT: usize = 65536;
@@ -73,7 +75,7 @@ impl Blakeout {
     fn process_input(&mut self, data: &[u8]) {
         let hash_size = DEFAULT_HASH_SIZE;
         let hash_count = self.buffer.len() / hash_size;
-        let mut digest = Blake2s::default();
+        let mut digest = Blake2sVar::new(DEFAULT_HASH_SIZE).expect("incorrect output size");
 
         if self.dirty {
             digest.update(&self.result);
@@ -83,13 +85,13 @@ impl Blakeout {
         Self::finalize_to(digest, &mut self.buffer.as_mut_slice()[0..hash_size]);
         let double_size = hash_size * 2;
         for x in (hash_size..hash_size * hash_count).step_by(hash_size) {
-            let mut digest = Blake2s::default();
+            let mut digest = Blake2sVar::new(DEFAULT_HASH_SIZE).expect("incorrect output size");
             let start = if x >= double_size { x - double_size } else { 0 };
             digest.update(&self.buffer[start..x]);
             Self::finalize_to(digest, &mut self.buffer.as_mut_slice()[x..(x + hash_size)]);
         }
         // Hashing whole buffer one way and another
-        let mut digest = Blake2s::default();
+        let mut digest = Blake2sVar::new(DEFAULT_HASH_SIZE).expect("incorrect output size");
         digest.update(&self.buffer);
         self.buffer.reverse();
         digest.update(&self.buffer);
@@ -98,9 +100,8 @@ impl Blakeout {
         self.dirty = true;
     }
 
-    fn finalize_to(digest: Blake2s, slice: &mut[u8]) {
-        let buf = Digest::finalize(digest);
-        slice.copy_from_slice(&buf[..]);
+    fn finalize_to(digest: Blake2sVar, slice: &mut[u8]) {
+        digest.finalize_variable(slice).expect("incorrect output size");
     }
 }
 
